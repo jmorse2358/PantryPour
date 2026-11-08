@@ -1,0 +1,106 @@
+<project_request name="Cocktail Pantry — Mobile-first Web App (Generate Code)" version="1.1" target_model="claude-sonnet-4-or-5">
+<meta>
+<author_request>Generate a complete, working, single-file web application (vanilla HTML, CSS, and JavaScript) that implements the mobile-first cocktail-creation website described below. The output must be executable as-is (open index.html in a browser). Include all assets inline or via data URLs where reasonable. Do NOT require build tools, frameworks, or server components. The app must use TheCocktailDB as the primary data source, store the pantry in localStorage, implement the matching algorithm, and implement the full UI behaviour (overlays sliding right-to-left, bottom bar, search, filters, confirm clear, etc.).</author_request>
+<priority_order>
+<priority level="1">Produce a single self-contained HTML file with working CSS + JS implementing the full UI and client-side logic.</priority>
+<priority level="2">Ensure accessibility, debounce behaviour, localStorage persistence, and TheCocktailDB integration are implemented and documented in a short usage block at the top of the output (separate from code).</priority>
+<priority level="3">Include a short implementation checklist and testing instructions after the code block.</priority>
+</priority_order>
+<constraints>
+<constraint>Vanilla HTML / CSS / JavaScript only. No frameworks.</constraint>
+<constraint>Single-file deliverable (index.html) unless impossible; prefer inline CSS and JS in the same file.</constraint>
+<constraint>Mobile-first responsive design. Target ~360×760 px portrait.</constraint>
+<constraint>Overlays must slide in from right-to-left when opening and left-to-right when closing.</constraint>
+<constraint>Pantry stored in localStorage under key "pantry_items_v1".</constraint>
+<constraint>Use TheCocktailDB endpoints (v1) as primary data source. If an endpoint requires an API key, default to the public v1 endpoints listed; include explicit code that uses these endpoints without server proxies.</constraint>
+<constraint>Default placeholder values: difficulty = 3 (out of 5), prep_time = "2–3 mins" for any drink missing these fields.</constraint>
+<constraint>Do NOT implement PWA features (no service workers), but structure and code comments must indicate how PWA caching could be added later.</constraint>
+<constraint>Include TheCocktailDB attribution visibly in the footer: "Cocktail data and images provided by TheCocktailDB (CC BY 3.0)".</constraint>
+<constraint>All interactions must be touch-friendly and optimised for mobile. Tap targets ≥ 44×44 px.</constraint>
+<constraint>Debounce real-time searches by 150ms to avoid excessive API calls.</constraint>
+<constraint>For names/IDs use lowercase and underscores in variable and function names where applicable (e.g., pantry_items_v1, match_score). Do not put comments in the code (user prefers no comments in code).</constraint>
+<constraint>Normalize ingredient names for matching (lowercase, trimmed). Provide minimal synonym handling mapping (e.g., "lemon juice" vs "fresh lemon juice") as a small JS dictionary to reduce false negatives.</constraint>
+<constraint>When the user presses the trash icon, show a confirmation dialog; only on confirm clear localStorage for pantry key.</constraint>
+<constraint>Drinks list cards must follow the prescribed layout: image left (72×72), vertical divider, right column with name + difficulty stars on the top line, one-line short info, bottom line prep time. Cards must be slightly beveled rectangles with spacing and subtle shadow. Partial matches must show background fade proportional to match_score and a small "X missing" pill when missing_count > 0.</constraint>
+<constraint>Include a short, separate "notes for developer" section (plain text) after the code showing where to change API endpoints, how to replace default difficulty/prep time with a local DB, and how to make it PWA-ready. This notes section is not part of the executable HTML file but must be printed after it in the output.</constraint>
+</constraints>
+</meta>
+
+<product_spec>
+<one_line>Mobile-first cocktail pantry web app (vanilla HTML/CSS/JS) — add ingredients to local pantry and show cocktails you can make using TheCocktailDB.</one_line>
+
+<ui_requirements>
+<pantry_view>
+<description>Landing page shows pantry items or empty state text. Persistent bottom bar with Add (left), Drinks (center), Trash (right).</description>
+</pantry_view>
+
+<add_overlay>
+<description>Slides in from right over pantry. Top bar: back icon, search input (real-time), three-dots menu (filters). Results show ingredient_tab cards. Clicking card slides ingredient_detail overlay.</description>
+</add_overlay>
+
+<ingredient_detail_overlay>
+<description>Slides in from right over add_overlay. Shows large image, name, short description and big Add button bottom-center. Back returns to add_overlay.</description>
+</ingredient_detail_overlay>
+
+<drinks_list_page>
+<description>Top bar: back, search, three-dots menu. Displays drink_tab cards sorted by match_score by default. Cards show image left, text right; background fade maps to match_score.</description>
+</drinks_list_page>
+
+<drink_detail_overlay>
+<description>Slides in from right. Large image, name, short history, difficulty stars (default 3), prep time (default 2–3 mins), ingredient list with missing highlighted in red, instructions. Back returns to drinks list.</description>
+</drink_detail_overlay>
+</ui_requirements>
+
+<data_integration>
+<api>TheCocktailDB</api>
+<endpoints>
+<endpoint name="search_by_name">https://www.thecocktaildb.com/api/json/v1/1/search.php?s={name}</endpoint>
+<endpoint name="lookup_by_id">https://www.thecocktaildb.com/api/json/v1/1/lookup.php?i={id}</endpoint>
+<endpoint name="filter_by_ingredient">https://www.thecocktaildb.com/api/json/v1/1/filter.php?i={ingredient}</endpoint>
+<endpoint name="list_all_ingredients">https://www.thecocktaildb.com/api/json/v1/1/list.php?i=list</endpoint>
+</endpoints>
+<fields_used>idDrink, strDrink, strInstructions, strDrinkThumb, strIngredient1..15, strMeasure1..15, strCategory, strAlcoholic</fields_used>
+</data_integration>
+
+<matching_algorithm>
+<brief>
+Normalize pantry items and drink ingredients to lowercase trimmed strings. For each fetched drink compute:
+match_count, total_ingredients, missing_count, match_score = match_count / total_ingredients.
+Sort drinks by match_score descending by default. Map match_score (0..1) to card background fade alpha (alpha = 0.15 + match_score*0.65).
+</brief>
+<debounce>150ms for searches</debounce>
+<local_storage_key>pantry_items_v1</local_storage_key>
+</matching_algorithm>
+</product_spec>
+
+<final_instructions_for_claude>
+<instructions>
+Output a single, self-contained HTML file named index.html (print the file contents as the first large code block in your reply). The code must be fully working when saved and opened in a modern browser (Chrome/Firefox/Safari). The file must include:
+<must>
+<item>All HTML, CSS, and JavaScript inline in the same file (no external files).</item>
+<item>Use only vanilla JavaScript (ES6+ allowed). Avoid frameworks and build tools.</item>
+<item>Implement TheCocktailDB API calls using fetch and the endpoints provided in this XML.</item>
+<item>Store pantry items in localStorage under the key pantry_items_v1; implement add, duplicate-check (prevent duplicates), and clear (with confirmation dialog).</item>
+<item>Implement real-time ingredient search in the Add overlay with 150ms debounce and minimal caching to avoid repeated identical API calls.</item>
+<item>Display drinks list computed from API responses and local pantry; compute match_score client-side without re-querying the API when pantry changes.</item>
+<item>Use default placeholders for missing difficulty (3/5 stars) and prep_time ("2–3 mins"). These values should be easily visible in the code for later replacement by a local DB.</item>
+<item>All overlays must animate sliding in from right-to-left when opening and left-to-right when closing; animations must feel smooth (220–300ms).</item>
+<item>Card layout must match the user's supplied image exactly: image left (72×72), thin vertical divider, right content with top line name + stars, one-line short info, bottom line prep time.</item>
+<item>Map match_score to background fade (alpha mapping described above) and show small "X missing" pill when missing_count &gt; 0.</item>
+<item>Implement small synonym mapping dictionary for common ingredient name variants to improve matching accuracy (e.g., lemon juice ↔ fresh lemon juice). The mapping need only include a few common examples and be easy to extend.</item>
+<item>Make the UI mobile-first with touch-friendly controls and tap targets ≥ 44×44 px, appropriate spacing and fonts as described in the earlier XML (outer padding 16px, card gap 10–12px, image 72×72, corner radius 10px).</item>
+<item>Include visible attribution text in a footer: "Cocktail data and images provided by TheCocktailDB (CC BY 3.0)".</item>
+<item>Do NOT include code comments in the generated HTML/JS/CSS (the user prefers no comments). Variable and function names must use lowercase_with_underscores.</item>
+<item>After the index.html code block, print a short (plain-text) "developer notes" section describing: where to change API endpoints, how to replace default difficulty/time with a local DB, and exact steps to convert to a PWA later (service worker key points). Also include a brief test checklist (5–8 checks) and instructions for manual testing described in clear steps.</item>
+</must>
+</instructions>
+
+<output_format>
+<format>
+<step>1. Print a single code block containing the complete index.html content.</step>
+<step>2. After the code block, print a small "usage" paragraph summarising how to run (save as index.html and open in browser), and any browser permissions or CORS notes.</step>
+<step>3. Then print the "developer notes" and "testing checklist" (plain text, not in code block).</step>
+</format>
+</output_format>
+</final_instructions_for_claude>
+</project_request>
